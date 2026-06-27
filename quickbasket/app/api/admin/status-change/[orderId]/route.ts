@@ -4,7 +4,7 @@ import Order from "@/models/order.model";
 import User from "@/models/user.model";
 import { NextRequest, NextResponse } from "next/server";
 
-export async function POST(req: NextRequest, { params }: { params: { orderId: string } }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ orderId: string }> }) {
   try {
     await connectToDB();
     const { orderId } = await params;
@@ -18,7 +18,7 @@ export async function POST(req: NextRequest, { params }: { params: { orderId: st
     order.status = status;
     let deliveryBoysPayload: any[] = [];
 
-    if (status === "OUT OF DELIVERY" && !order.assignment) {
+    if ((status === "OUT OF DELIVERY" || status === "out of delivery") && !order.assignment) {
       const { latitude, longitude } = order.address;
 
       const nearByDeliveryBoys = await User.find({

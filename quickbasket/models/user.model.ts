@@ -8,8 +8,8 @@ interface IUser {
   mobile?: string;
   role: "user" | "admin" | "deliveryBoy";
   img?: string;
-  location: {
-    type: string;
+  location?: {
+    type: "Point";
     coordinates: number[];
   };
   socketId: string | null;
@@ -38,6 +38,7 @@ const userSchema = new mongoose.Schema<IUser>(
       coordinates: {
         type: [Number],
         default: [0, 0],
+        //longitude, latitude 
       },
     },
     socketId: { type: String, default: null },

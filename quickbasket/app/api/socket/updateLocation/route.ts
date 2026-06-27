@@ -5,9 +5,9 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req:NextRequest){
     try{
-        const [userId,socketId] = await req.json()
+     
         await connectToDB()
-        const{userid,location} =await  req.json()
+        const{userId,location} =await  req.json()
 
         if(!userId || !location){
              return NextResponse.json({
@@ -19,7 +19,9 @@ export async function POST(req:NextRequest){
 
         }
 
-        const user = await User.findByIdAndUpdate(userId,{location})
+ 
+        const user = await User.findByIdAndUpdate(userId, { location }, { new: true });
+console.log("updateLocation API:", { userId, location, updatedUser: user });
 
         if(!user){
              return NextResponse.json({

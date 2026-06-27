@@ -14,28 +14,36 @@ const port = process.env.PORT || 5000
 
 const io = new Server(server,{
     cors:{
-        cors: {
+     
         origin: process.env.NEXT_BASE_URL
-    }
+    
     }
 })
 
 
 io.on("connection",(socket)=>{
+    console.log("User connected",socket.id)
    
 
     socket.on("identity",async (userId)=>{
+        console.log("User identity",userId)
        
         await axios.post(`${process.env.NEXT_BASE_URL}/api/socket/connect`,{userId,socketId:socket.id})
     })
 
-    socket.on("update-location",async ({userId,latitude,longitude})=>{
-        const location={
+     socket.on("updateLocation",async ({userId,latitude,longitude})=>{
+       
+    const location={
         type:"Point",
         coordinates:[longitude,latitude]
     }
-     await axios.post(`${process.env.NEXT_BASE_URL}/api/socket/update-location`,{userId,location})
-    })
+    await axios.post(`${process.env.NEXT_BASE_URL}/api/socket/updateLocation`,{userId,location})
+    
+   })
+
+
+    
+
 
     socket.on("disconnect",()=>{
         console.log("User disconnected",socket.id)
