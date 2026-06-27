@@ -9,6 +9,7 @@ import {
   Truck, IndianRupee, Search
 } from 'lucide-react'
 import AdminOrderCard from '@/components/AdminOrderCard'
+import { getSocket } from '@/lib/socket'
 
 
 const filterTabs = [
@@ -34,20 +35,18 @@ const ManageOrders = () => {
       }
     }
     getOrders()
+    // listen for real-time new orders
+    const socket = getSocket()
+    socket?.on("new-order", (newOrder: IOrderItem) => {
+      setOrders((prev) => [newOrder, ...prev])
+    })
+
+    return () => {
+      socket?.off("new-order")
+    }
   }, [])
 
-//   const handleStatusChange = async (id: string, status: string) => {
-//     try {
-//       await axios.patch(`/api/admin/update-order/${id}`, { status })
-//       setOrders((prev) =>
-//         prev.map((o) =>
-//           o._id?.toString() === id ? { ...o, status } : o
-//         )
-//       )
-//     } catch (err) {
-//       console.log(err)
-//     }
-//   }
+
 
   // Metrics
   const total   = orders.length
@@ -127,13 +126,7 @@ const ManageOrders = () => {
             </p>
           </div>
 
-          <button className="flex items-center gap-2 text-sm font-medium 
-                             text-green-800 bg-white border border-gray-200 
-                             px-4 py-2 rounded-full shadow-sm 
-                             hover:bg-gray-50 transition-colors mt-1">
-            <Sparkles size={15} className="text-green-600" />
-            Admin Console
-          </button>
+         
         </div>
 
         {/* Metric cards */}

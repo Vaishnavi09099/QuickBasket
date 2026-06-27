@@ -1,11 +1,12 @@
 "use client"
 import { IOrderItem } from '@/models/order.model'
 import { motion, AnimatePresence } from 'motion/react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { 
   CreditCard, MapPin, Package, 
   ChevronDown, ChevronUp, Truck 
 } from 'lucide-react'
+import { getSocket } from '@/lib/socket'
 
 const paymentStatusStyles: Record<string, string> = {
   unpaid: "bg-red-100 text-red-700 border-red-300",
@@ -33,6 +34,23 @@ const getStatusColor = (status: string) => {
 
 const UserOrderCard = ({ order }: { order: IOrderItem }) => {
   const [expanded, setExpanded] = useState(false)
+      const [status,setStatus]=useState(order.status)
+
+
+      useEffect(():any=>{
+const socket=getSocket()
+socket.on("order-status-update",(data)=>{
+    try{
+      if(String(data.orderId) === String(order?._id)){
+        setStatus(data.status)
+      }
+    }catch(e){
+      console.error('order-status-update handler error',e)
+    }
+})
+return ()=>socket.off("order-status-update")
+    },[])
+
 
   return (
     <motion.div
@@ -66,8 +84,8 @@ const UserOrderCard = ({ order }: { order: IOrderItem }) => {
           </span>
           <span className={`text-xs font-medium px-2.5 py-1 
                             rounded-full border capitalize
-                            ${getStatusColor(order.status)}`}>
-            {order.status}
+                            ${getStatusColor(status)}`}>
+            {status}
           </span>
         </div>
       </div>
@@ -163,12 +181,12 @@ const UserOrderCard = ({ order }: { order: IOrderItem }) => {
         <div className="flex items-center gap-1.5">
           <Package
             size={13}
-            className={deliveryStatusStyles[order.status] ?? "text-gray-400"}
+            className={deliveryStatusStyles[status] ?? "text-gray-400"}
           />
           <span className={`text-xs font-medium capitalize
-                            ${deliveryStatusStyles[order.status] 
+                            ${deliveryStatusStyles[status] 
                               ?? "text-gray-400"}`}>
-            Delivery: {order.status}
+            Delivery: {status}
           </span>
         </div>
         <p className="text-sm font-bold text-gray-900">

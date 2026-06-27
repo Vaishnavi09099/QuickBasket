@@ -1,13 +1,16 @@
 "use client"
 
+
 import { IOrderItem } from '@/models/order.model'
 import { motion, AnimatePresence } from 'motion/react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Truck, User, Phone, MapPin, CreditCard,
   ChevronDown, ChevronUp, ShoppingBasket
 } from 'lucide-react'
 import axios from 'axios'
+import { getSocket } from '@/lib/socket'
+
 
 const statusOptions: IOrderItem["status"][] = [
   "pending" , "out of delivery" , "delivered"
@@ -19,7 +22,7 @@ const statusColors: Record<IOrderItem["status"], string> = {
 
  
   "out of delivery": "bg-green-100 text-green-700 border-green-300",
-  delivered:          "bg-emerald-100 text-emerald-700 border-emerald-300",
+  delivered:          "bg-blue-100 text-blue-700 border-blue-300",
 
 }
 
@@ -27,7 +30,7 @@ const statusDot: Record<IOrderItem["status"], string> = {
   pending:            "bg-yellow-500",
  
   "out of delivery": "bg-green-500",
-  delivered:          "bg-emerald-500",
+  delivered:          "bg-blue-500",
  
 }
 
@@ -35,14 +38,20 @@ const AdminOrderCard = ({ order }: { order: IOrderItem }) => {
   const [expanded, setExpanded] = useState(false)
   const [status, setStatus] = useState<IOrderItem["status"]>(order.status)
 
-  const updateStatus = async (orderId: string, newStatus: IOrderItem["status"]) => {
+  const updateStatus = async (orderId: string, nextStatus: IOrderItem["status"]) => {
     try {
-      await axios.post(`/api/admin/status-change/${orderId}`, { status: newStatus })
-      setStatus(newStatus)
+      const res = await axios.post(`/api/admin/status-change/${orderId}`, { status: nextStatus })
+      console.log(res.data)
+      setStatus(nextStatus)
     } catch (err) {
       console.log(err)
     }
   }
+
+  useEffect(()=>{
+    // socket handling moved to the parent ManageOrders page
+    },[])
+
 
   return (
     <motion.div
@@ -181,3 +190,5 @@ const AdminOrderCard = ({ order }: { order: IOrderItem }) => {
 }
 
 export default AdminOrderCard
+
+
