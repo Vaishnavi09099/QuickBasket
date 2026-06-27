@@ -1,0 +1,50 @@
+import connectToDB from "@/lib/db";
+import User from "@/models/user.model";
+
+import { NextRequest, NextResponse } from "next/server";
+
+export async function POST(req:NextRequest){
+    try{
+        const [userId,socketId] = await req.json()
+        await connectToDB()
+        const{userid,location} =await  req.json()
+
+        if(!userId || !location){
+             return NextResponse.json({
+            message:"Missing userId or location"
+        },{
+            status:400
+        })
+
+
+        }
+
+        const user = await User.findByIdAndUpdate(userId,{location})
+
+        if(!user){
+             return NextResponse.json({
+              message:"User not found"
+        },{
+            status:400
+        })
+
+        }
+      return NextResponse.json({
+              message:"Location updated"
+        },{
+            status:200
+        })
+
+           
+        
+       
+
+    }catch(err){
+        return NextResponse.json({
+              message:`Update location error${err}`
+        },{
+            status:500
+        })
+
+    }
+}

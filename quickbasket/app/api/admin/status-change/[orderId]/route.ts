@@ -1,0 +1,94 @@
+import connectToDB from "@/lib/db";
+import DeliveryAssignment from "@/models/deliveryAssignment.model";
+import Order from "@/models/order.model";
+import User from "@/models/user.model";
+import { NextRequest, NextResponse } from "next/server";
+
+export async function POST(req: NextRequest, { params }: { params: { orderId: string } }) {
+  try {
+    await connectToDB();
+    const { orderId } = await params;
+    const { status } = await req.json();
+
+    const order = await Order.findById(orderId).populate("user");
+    if (!order) {
+      return NextResponse.json({ message: "Order not found" }, { status: 400 });
+    }
+
+    order.status = status;
+    let deliveryBoysPayload: any[] = [];
+
+    if (status === "OUT OF DELIVERY" && !order.assignment) {
+      const { latitude, longitude } = order.address;
+
+      const nearByDeliveryBoys = await User.find({
+        role: "deliveryBoy",
+        location: {
+          $near: {
+            $geometry: { type: "Point", coordinates: [Number(longitude), Number(latitude)] },
+            $maxDistance: 10000, // 10 km radius
+          },
+        },
+      });
+
+      const nearByIds = nearByDeliveryBoys.map((b) => b._id);
+
+      const busyIds = await DeliveryAssignment.find({
+        assignedTo: { $in: nearByIds },
+        status: { $nin: ["broadcasted", "completed"] },
+      }).distinct("assignedTo");
+
+      const busyIdSet = new Set(busyIds.map((b) => String(b)));
+
+      // ✅ Fix: busy wale NAHI chahiye, isliye ! lagaya
+      const availableDeliveryBoys = nearByDeliveryBoys.filter(
+        (b) => !busyIdSet.has(String(b._id))
+      );
+
+      const candidates = availableDeliveryBoys.map((b) => b._id);
+
+      if (candidates.length === 0) {
+        await order.save();
+        return NextResponse.json(
+          { message: "No available delivery boy found nearby" },
+          { status: 200 }
+        );
+      }
+
+      const deliveryAssignment = await DeliveryAssignment.create({
+        order: order._id,
+        broadcastedTo: candidates,
+        status: "broadcasted",
+      });
+
+      // ✅ Fix: comma tha assignment ke baad, = hona chahiye
+      order.assignment = deliveryAssignment._id;
+
+      deliveryBoysPayload = availableDeliveryBoys.map((b) => ({
+        name: b.name,
+        id: b._id,
+        mobile: b.mobile,
+        latitude: b.location.coordinates[1],
+        longitude: b.location.coordinates[0],
+      }));
+         await deliveryAssignment.populate("order")
+    }
+    
+ 
+
+    // ✅ Fix: save + final return jo missing tha
+    await order.save();
+    await order.populate("user")
+    return NextResponse.json(
+      {
+        message: "Order status updated successfully",
+        deliveryBoys: deliveryBoysPayload,
+        assignment:order.assignment?._id
+      },
+      { status: 200 }
+    );
+  } catch (err) {
+    console.error("Order status change error:", err);
+    return NextResponse.json({ message: "Order status change error" }, { status: 500 });
+  }
+}
