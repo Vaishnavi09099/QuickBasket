@@ -4,9 +4,11 @@ import { motion, AnimatePresence } from 'motion/react'
 import { useEffect, useState } from 'react'
 import { 
   CreditCard, MapPin, Package, 
-  ChevronDown, ChevronUp, Truck 
+  ChevronDown, ChevronUp, Truck, 
+  UserCheck
 } from 'lucide-react'
 import { getSocket } from '@/lib/socket'
+import router from 'next/router'
 
 const paymentStatusStyles: Record<string, string> = {
   unpaid: "bg-red-100 text-red-700 border-red-300",
@@ -63,7 +65,7 @@ return ()=>socket.off("order-status-update")
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center 
                       justify-between gap-3 border-b border-gray-100 
-                      px-5 py-4 bg-gradient-to-r from-green-50 to-white">
+                      px-5 py-4 bg-linear-to-r from-green-50 to-white">
         <div>
           <h3 className="text-sm font-bold text-green-800">
             order #{order._id?.toString().slice(-6)}
@@ -96,12 +98,12 @@ return ()=>socket.off("order-status-update")
         {/* Payment method */}
         {order.paymentMethod === "cod" ? (
           <div className="flex items-center gap-2 text-xs text-gray-500">
-            <Truck size={13} className="text-green-600 flex-shrink-0" />
+            <Truck size={13} className="text-green-600 shrink-0" />
             <span>Cash on Delivery</span>
           </div>
         ) : (
           <div className="flex items-center gap-2 text-xs text-gray-500">
-            <CreditCard size={13} className="text-green-600 flex-shrink-0" />
+            <CreditCard size={13} className="text-green-600 shrink-0" />
             <span>Online Payment</span>
           </div>
         )}
@@ -109,9 +111,46 @@ return ()=>socket.off("order-status-update")
         {/* Address */}
         <div className="flex items-start gap-2 text-xs text-gray-500">
           <MapPin size={13} 
-                  className="text-green-600 flex-shrink-0 mt-0.5" />
+                  className="text-green-600 shrink-0 mt-0.5" />
           <span>{order.address.fullAddress}</span>
         </div>
+
+    {order.assignedDeliveryBoy && (
+  <div className="mt-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 space-y-3">
+    
+    {/* Top row: delivery boy info + call button */}
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-2.5">
+        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+          <UserCheck size={15} className="text-blue-600" />
+        </div>
+        <div>
+          <p className="text-xs font-semibold text-gray-800">
+            {order.assignedDeliveryBoy.name}
+          </p>
+          <p className="text-xs text-gray-500">
+           📞  +91 {order.assignedDeliveryBoy.mobile}
+          </p>
+        </div>
+      </div>
+      <a
+        href={`tel:${order.assignedDeliveryBoy.mobile}`}
+        className="text-xs font-semibold border border-gray-300 text-gray-800 px-3 py-1.5 rounded-lg bg-white hover:bg-gray-50 transition"
+      >
+      Call
+      </a>
+    </div>
+
+    {/* Bottom row: full width track button */}
+    <button
+      className="w-full flex items-center justify-center gap-2 bg-green-600 text-white font-semibold px-4 py-2 rounded-xl text-xs shadow hover:bg-green-700 transition"
+      onClick={() => router.push(`/user/track-order/${order._id?.toString()}`)}
+    >
+      <Truck size={18} /> Track Your Order
+    </button>
+
+  </div>
+)}
 
         {/* Toggle items */}
         <button
@@ -146,7 +185,7 @@ return ()=>socket.off("order-status-update")
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-amber-50 
                                     flex items-center justify-center 
-                                    overflow-hidden flex-shrink-0">
+                                    overflow-hidden shrink-0">
                       <img 
                         src={item.image} 
                         alt={item.name}
@@ -174,6 +213,9 @@ return ()=>socket.off("order-status-update")
           </motion.div>
         )}
       </AnimatePresence>
+
+
+       
 
       {/* Footer */}
       <div className="flex items-center justify-between px-5 py-3 

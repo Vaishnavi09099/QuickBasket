@@ -7,19 +7,23 @@ export async function GET(req:NextRequest){
     try{
         await connectToDB();
         const session = await auth()
-        const orders = await Order.find({
-            user:session?.user?.id
-        }).populate("user").sort({createdAt:-1})
-        if(!orders){
+        if (!session?.user?.id) {
             return NextResponse.json({
-                message:"Orders not found"
-            },{
-                status:400
+                message: "Unauthorized"
+            }, {
+                status: 401
             })
         }
-          return NextResponse.json(orders,{
-                status:200
-            })
+
+        const orders = await Order.find({
+            user: session.user.id
+        })
+        .populate("user assignedDeliveryBoy")
+        .sort({ createdAt: -1 })
+
+        return NextResponse.json(orders, {
+            status: 200
+        })
 
     }catch(err){
           return NextResponse.json({

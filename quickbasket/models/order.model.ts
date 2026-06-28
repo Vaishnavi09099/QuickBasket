@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { IUser } from "./user.model";
 
 export interface IOrderItem {
   _id?: mongoose.Types.ObjectId;
@@ -27,7 +28,7 @@ export interface IOrderItem {
   };
   // ✅ string union, array nahi
   status: "pending" | "out of delivery" | "delivered";
-  assignedDeliveryBoy?: mongoose.Types.ObjectId;
+  assignedDeliveryBoy?: IUser;
   createdAt?: Date;
   updatedAt?: Date;
 }

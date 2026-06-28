@@ -6,14 +6,12 @@ export async function GET(req:NextRequest){
    try{
     await connectToDB();
   const orders = await Order.find({})
-  .populate("user")
-  .sort({ createdAt: -1 });
+    .populate("user assignedDeliveryBoy")
+    .sort({ createdAt: -1 });
 
-     return NextResponse.json(
-       orders
-    ,{
-        status:200
-    })
+     return NextResponse.json(orders, {
+        status: 200,
+     })
 
    }catch(err){
     return NextResponse.json({

@@ -13,7 +13,7 @@ import { getSocket } from '@/lib/socket'
 
 
 const filterTabs = [
-  "All", "Pending", "Preparing", "Out for Delivery", "Delivered", "Cancelled"
+  "All", "Pending", "Out of Delivery", "Delivered"
 ]
 
 const ManageOrders = () => {
@@ -75,7 +75,7 @@ const ManageOrders = () => {
   // Loading skeleton
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-green-50 
+      <div className="min-h-screen bg-linear-to-b from-green-50 
                       via-yellow-50 to-[#FFF9E6]">
         <div className="max-w-4xl mx-auto px-4 py-10 space-y-4">
           <div className="w-32 h-8 bg-gray-200 rounded-full animate-pulse" />
@@ -96,7 +96,7 @@ const ManageOrders = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-green-50 
+    <div className="min-h-screen bg-linear-to-b from-green-50 
                     via-yellow-50 to-[#FFF9E6]">
       <div className="max-w-4xl mx-auto px-4 py-10">
 
@@ -164,7 +164,7 @@ const ManageOrders = () => {
                         shadow-sm px-5 py-4 mb-5">
           <div className="flex items-center gap-2 border border-gray-200 
                           rounded-xl px-4 py-2.5 mb-4">
-            <Search size={15} className="text-gray-400 flex-shrink-0" />
+            <Search size={15} className="text-gray-400 shrink-0" />
             <input
               type="text"
               placeholder="Search by order id, customer, or phone..."

@@ -13,8 +13,10 @@ export async function GET() {
     }
 
     const assignments = await DeliveryAssignment.find({
-      broadcastedTo: session.user.id,
-      status: "broadcasted",
+      $or: [
+        { broadcastedTo: session.user.id, status: "broadcasted" },
+        { assignedTo: session.user.id },
+      ],
     }).populate("order").sort({ createdAt: -1 })
 
     return NextResponse.json(assignments, { status: 200 })

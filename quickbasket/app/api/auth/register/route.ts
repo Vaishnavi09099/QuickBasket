@@ -21,10 +21,16 @@ export async function POST(req: NextRequest) {
 
         const hashed = await bcrypt.hash(password, 10);
 
-        const user = new User({ name, email, password: hashed });
+        const adminExists = await User.findOne({ role: "admin" });
+        const role = adminExists ? "user" : "admin";
+
+        const user = new User({ name, email, password: hashed, role });
         await user.save();
 
-        return NextResponse.json({ message: "User created successfully", user: { id: user._id, name: user.name, email: user.email } }, { status: 201 });
+        return NextResponse.json({
+            message: "User created successfully",
+            user: { id: user._id, name: user.name, email: user.email, role: user.role }
+        }, { status: 201 });
     } catch (err) {
         console.error("/api/auth/register error:", err);
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });

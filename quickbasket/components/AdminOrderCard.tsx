@@ -6,7 +6,8 @@ import { motion, AnimatePresence } from 'motion/react'
 import { useEffect, useState } from 'react'
 import {
   Truck, User, Phone, MapPin, CreditCard,
-  ChevronDown, ChevronUp, ShoppingBasket
+  ChevronDown, ChevronUp, ShoppingBasket,
+  UserCheck
 } from 'lucide-react'
 import axios from 'axios'
 import { getSocket } from '@/lib/socket'
@@ -36,7 +37,7 @@ const statusDot: Record<IOrderItem["status"], string> = {
 
 const AdminOrderCard = ({ order }: { order: IOrderItem }) => {
   const [expanded, setExpanded] = useState(false)
-  const [status, setStatus] = useState<IOrderItem["status"]>(order.status)
+  const [status, setStatus] = useState<IOrderItem["status"]>("pending")
 
   const updateStatus = async (orderId: string, nextStatus: IOrderItem["status"]) => {
     try {
@@ -49,8 +50,9 @@ const AdminOrderCard = ({ order }: { order: IOrderItem }) => {
   }
 
   useEffect(()=>{
-    // socket handling moved to the parent ManageOrders page
-    },[])
+    setStatus(order.status)
+   
+    },[order])
 
 
   return (
@@ -92,6 +94,11 @@ const AdminOrderCard = ({ order }: { order: IOrderItem }) => {
             </div>
           </div>
 
+          
+           
+
+
+
           {/* Right — status dropdown */}
           <div className="flex-shrink-0">
             <select
@@ -108,6 +115,7 @@ const AdminOrderCard = ({ order }: { order: IOrderItem }) => {
           </div>
         </div>
 
+        {/* Customer details */}
         {/* Customer details */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2">
           <div className="flex items-center gap-2 text-xs text-gray-500">
@@ -131,6 +139,31 @@ const AdminOrderCard = ({ order }: { order: IOrderItem }) => {
             <span>Delivery: <span className="font-semibold capitalize text-gray-700">{status}</span></span>
           </div>
         </div>
+
+        {/* Assigned Delivery Boy */}
+        {order.assignedDeliveryBoy && (
+          <div className="mt-3 flex items-center justify-between bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                <UserCheck size={15} className="text-blue-600" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-gray-800">
+                  {order.assignedDeliveryBoy.name}
+                </p>
+                <p className="text-xs text-gray-500">
+                  +91 {order.assignedDeliveryBoy.mobile}
+                </p>
+              </div>
+            </div>
+            <a
+              href={`tel:${order.assignedDeliveryBoy.mobile}`}
+              className="text-xs font-semibold bg-blue-800 border border-blue-900 text-black px-3 py-1.5 rounded-lg  transition"
+            >
+              Call
+            </a>
+          </div>
+        )}
       </div>
 
       {/* Footer */}
@@ -190,5 +223,4 @@ const AdminOrderCard = ({ order }: { order: IOrderItem }) => {
 }
 
 export default AdminOrderCard
-
 
