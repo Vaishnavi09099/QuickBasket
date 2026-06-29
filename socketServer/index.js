@@ -38,8 +38,32 @@ io.on("connection",(socket)=>{
         coordinates:[longitude,latitude]
     }
     await axios.post(`${process.env.NEXT_BASE_URL}/api/socket/updateLocation`,{userId,location})
-    
+       io.emit("update-deliveryBoy-location",{userId,location})
    })
+
+
+
+
+   socket.on("join-room",(roomId)=>{
+   console.log("joinded room",roomId)
+    socket.join(roomId)
+   })
+
+socket.on("send-message", async (message) => {
+  console.log(message)
+  try {
+    const result = await axios.post(`${process.env.NEXT_BASE_URL}/api/chat/save`, message)
+    console.log("saved:", result.data)
+  } catch (error) {
+    console.log("save error:", error.message)
+  }
+  io.to(message.roomId).emit("send-message", message)
+})
+ 
+
+  
+
+
 
 
     

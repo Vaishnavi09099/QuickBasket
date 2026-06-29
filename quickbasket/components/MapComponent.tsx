@@ -1,71 +1,62 @@
-"use client";
+"use client"
+import React, { useEffect } from 'react'
+import "leaflet/dist/leaflet.css"
+import { MapContainer, Marker, TileLayer, useMap } from 'react-leaflet'
+import L, { LatLngExpression } from 'leaflet'
 
-import React, { useEffect, useRef } from "react";
+const markerIcon = new L.Icon({
+  iconUrl: "/location.jpg",
+  iconSize: [40, 40],
+  iconAnchor: [20, 40]
+})
 
 type Props = {
-  position: [number, number] | null;
-  onDragEnd: (pos: [number, number]) => void;
-};
+  position: [number, number] | null
+  onDragEnd: (pos: [number, number]) => void
+}
 
-export default function MapComponent({ position, onDragEnd }: Props) {
-  const mapContainerRef = useRef<HTMLDivElement | null>(null);
-  const mapRef = useRef<any>(null);
-  const markerRef = useRef<any>(null);
+function DraggableMarker({ position, onDragEnd }: Props) {
+  const map = useMap()
 
   useEffect(() => {
-    if (!mapContainerRef.current) return;
+    if (position) {
+      map.setView(position as LatLngExpression, 15, { animate: true })
+    }
+  }, [position, map])
 
-    let cancelled = false;
+  if (!position) return null
 
-    const init = async () => {
-      const L = (await import("leaflet")).default;
-      await import("leaflet/dist/leaflet.css");
-
-      const customIcon = new L.Icon({
-        iconUrl: "/location.jpg",
-        iconSize: [40, 40],
-        iconAnchor: [20, 40],
-      });
-
-      if (!mapRef.current) {
-        const center = position ?? [0, 0];
-        const map = L.map(mapContainerRef.current as HTMLElement).setView(center, position ? 15 : 2);
-        mapRef.current = map;
-
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-          attribution:
-            '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-        }).addTo(map);
-
-        const marker = L.marker(center, {
-          icon: customIcon,
-          draggable: true,
-        }).addTo(map);
-        markerRef.current = marker;
-
-        marker.on("dragend", () => {
-          const { lat, lng } = marker.getLatLng();
-          onDragEnd([lat, lng]);
-        });
-      } else {
-        if (position) {
-          mapRef.current.setView(position, 15, { animate: true });
-          markerRef.current?.setLatLng(position);
+  return (
+    <Marker
+      icon={markerIcon}
+      position={position as LatLngExpression}
+      draggable={true}
+      eventHandlers={{
+        dragend: (e: L.LeafletEvent) => {
+          const marker = e.target as L.Marker
+          const { lat, lng } = marker.getLatLng()
+          onDragEnd([lat, lng])
         }
-      }
-    };
+      }}
+    />
+  )
+}
 
-    init();
+export default function MapComponent({ position, onDragEnd }: Props) {
+  const center = position ?? [20.5937, 78.9629] // india center as default
 
-    return () => {
-      if (mapRef.current) {
-        mapRef.current.remove();
-        mapRef.current = null;
-        markerRef.current = null;
-      }
-      cancelled = true;
-    };
-  }, [position, onDragEnd]);
-
-  return <div ref={mapContainerRef} className="h-full w-full" />;
+  return (
+    <MapContainer
+      center={center as LatLngExpression}
+      zoom={position ? 15 : 5}
+      scrollWheelZoom={true}
+      className="w-full h-full"
+    >
+      <TileLayer
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+      />
+      <DraggableMarker position={position} onDragEnd={onDragEnd} />
+    </MapContainer>
+  )
 }

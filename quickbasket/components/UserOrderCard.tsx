@@ -8,7 +8,7 @@ import {
   UserCheck
 } from 'lucide-react'
 import { getSocket } from '@/lib/socket'
-import router from 'next/router'
+import { useRouter } from 'next/navigation'
 
 const paymentStatusStyles: Record<string, string> = {
   unpaid: "bg-red-100 text-red-700 border-red-300",
@@ -37,6 +37,7 @@ const getStatusColor = (status: string) => {
 const UserOrderCard = ({ order }: { order: IOrderItem }) => {
   const [expanded, setExpanded] = useState(false)
       const [status,setStatus]=useState(order.status)
+      const router = useRouter()
 
 
       useEffect(():any=>{

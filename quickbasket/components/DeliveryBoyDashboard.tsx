@@ -1,27 +1,73 @@
 'use client'
-import axios from 'axios'
-import React, { useEffect, useState } from 'react'
-import { MapPin, CheckCircle, XCircle, Bike, ArrowLeft } from 'lucide-react'
 import { getSocket } from '@/lib/socket'
 
+import { RootState } from '@/redux/store'
+import axios from 'axios'
+import { resolveSoa } from 'dns'
+import React, { useEffect, useState } from 'react'
+import { useSelector } from 'react-redux'
+import LiveMap from './LiveMap'
+import DeliveryChat from './DeliveryChat'
+import { div } from 'motion/react-client'
+import { Loader } from 'lucide-react'
+import { Bar, BarChart, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import DeliveryAssignment from '@/models/deliveryAssignment.model'
 
-
-const DeliveryBoyDashboard = () => {
+interface ILocation {
+  latitude: number,
+  longitude: number
+}
+function DeliveryBoyDashboard({earning}:{earning:number}) {
   const [assignments, setAssignments] = useState<any[]>([])
+  const { userData } = useSelector((state: RootState) => state.user)
+  const [activeOrder, setActiveOrder] = useState<any>(null)
+  const [showOtpBox,setShowOtpBox]=useState(false)
+  const [otpError,setOtpError]=useState("")
+  const [sendOtpLoading,setSendOtpLoading]=useState(false)
+  const [verifyOtpLoading,setVerifyOtpLoading]=useState(false)
+  const [otp,setOtp]=useState("")
+  const [userLocation, setUserLocation] = useState<ILocation>(
+    {
+      latitude: 0,
+      longitude: 0
+    }
+  )
+  const [deliveryBoyLocation, setDeliveryBoyLocation] = useState<ILocation>({
+    latitude: 0,
+    longitude: 0
+  })
+  const fetchAssignments = async () => {
+    try {
+      const result = await axios.get("/api/delivery/get-assignments")
+      setAssignments(result.data)
+    } catch (error) {
+      console.log(error)
+    }
+  }
 
   useEffect(() => {
-    const fetchAssignments = async () => {
-      try {
-        const res = await axios.get("/api/delivery/get-assignments")
-  setAssignments(Array.isArray(res.data) ? res.data : res.data.assignments ?? [])
-       
-      } catch (err) {console.log(err)}
-    }
-    fetchAssignments()
-  }, [])
+    const socket = getSocket()
+    if (!userData?._id) return
+    if (!navigator.geolocation) return
+    const watcher = navigator.geolocation.watchPosition((pos) => {
+      const lat = pos.coords.latitude
+      const lon = pos.coords.longitude
+      setDeliveryBoyLocation({
+        latitude: lat,
+        longitude: lon
+      })
+      socket.emit("update-location", {
+        userId: userData?._id,
+        latitude: lat,
+        longitude: lon
+      })
+    }, (err) => {
+      console.log(err)
+    }, { enableHighAccuracy: true })
+    return () => navigator.geolocation.clearWatch(watcher)
+  }, [userData?._id])
 
-
-    useEffect((): any => {
+  useEffect((): any => {
     const socket = getSocket()
 
     socket.on("new-assignment", (deliveryAssignment) => {
@@ -30,97 +76,149 @@ const DeliveryBoyDashboard = () => {
     return () => socket.off("new-assignment")
   }, [])
 
-  
-
-  const handleAccept = async (id:string) => {
+  const handleAccept = async (id: string) => {
     try {
-      const res = await axios.get(`/api/delivery/assignment/${id}/accept-assignment`)
-      if (res.status === 200) {
-        setAssignments((prev) => prev.map((a) =>
-          a._id === id ? { ...a, status: "assigned" } : a
-        ))
-      }
-    } catch (err) {
-      console.log(err)
+      const result = await axios.get(`/api/delivery/assignment/${id}/accept-assignment`)
+      fetchCurrentOrder()
+    } catch (error) {
+    console.log(error)
     }
   }
 
+
+  const fetchCurrentOrder = async () => {
+    try {
+      const result = await axios.get("/api/delivery/current-order")
+      if (result.data.active) {
+        setActiveOrder(result.data.assignment)
+        setUserLocation({
+          latitude: result.data.assignment.order.address.latitude,
+          longitude: result.data.assignment.order.address.longitude
+        })
+      }
+
+    } catch (error) {
+      console.log(error)
+    }
+  }
+
+
+  useEffect(():any=>{
+const socket=getSocket()
+socket.on("update-deliveryBoy-location",({userId,location})=>{
+  setDeliveryBoyLocation({
+    latitude:location.coordinates[1],
+    longitude:location.coordinates[0]
+  })
+})
+return ()=>socket.off("update-deliveryBoy-location")
+  },[])
+
+
+
+
+  useEffect(() => {
+    fetchCurrentOrder()
+    fetchAssignments()
+  }, [userData])
+
+
+
+
+if(!activeOrder && assignments.length===0){
+ 
+  const todayEarning=[
+    {name:"Today",
+     earning,
+     deliveries:earning/40
+    }
+  ]
   return (
-    <div className='w-full min-h-screen bg-gray-50'>
+    <div className='flex items-center justify-center min-h-screen bg-linear-to-br from-white to-green-50 p-6'>
+      <div className='max-w-md w-full text-center'>
+      <h2 className='text-2xl font-bold text-gray-800'>No Active Deliveries 🚛</h2>
+      <p className='text-gray-500 mb-5'>Stay online to receive new orders</p>
 
-      {/* Header */}
-      <div className="w-full bg-gradient-to-br from-green-50 to-white px-6 pt-8 pb-6">
-        <div className="max-w-3xl mx-auto">
-          <div className="flex items-center justify-between mb-6">
-           
-            
-          </div>
-          <p className="text-xs font-semibold text-green-700 uppercase tracking-widest mb-1">
-            Deliveries
-          </p>
-          <h1 className="text-4xl font-extrabold text-green-950 mb-2">
-            My Assignments
-          </h1>
-          <p className="text-sm text-gray-400">
-            Accept orders, track deliveries, and keep every basket moving.
-          </p>
-        </div>
+      <div className='bg-white border rounded-xl shadow-xl p-6'>
+        <h2 className='font-medium text-green-700 mb-2'>Today's Performance</h2>
+         <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={todayEarning}>
+         <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="earnings" name="Earnings (₹)" />
+                <Bar dataKey="deliveries" name="Deliveries" />
+
+                    </BarChart>
+                </ResponsiveContainer>
+
+         <p className='mt-4 text-lg font-bold text-green-700'>{earning || 0} Earned today</p>
+         <button className='mt-4 w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg' onClick={()=>window.location.reload()}>Refresh Earning</button>
+
       </div>
+      </div>
+     
+    </div>
+  )
+}
 
-      {/* Content */}
-      <div className='max-w-3xl mx-auto px-4 py-6'>
+  if (activeOrder && userLocation) {
+    return (
+      <div className='p-4 pt-[120px] min-h-screen bg-gray-50'>
+        <div className='max-w-3xl mx-auto'>
+          <h1 className='text-2xl font-bold text-green-700 mb-2'>Active Delivery</h1>
+          <p className='text-gray-600 text-sm mb-4'>order#{activeOrder.order._id.slice(-6)}</p>
 
-        {assignments.length === 0 && (
-          <div className='text-center py-20 text-gray-400'>
-            <Bike size={36} className='mx-auto mb-2 opacity-30' />
-            <p className='text-sm'>No assignments yet</p>
+          <div className='rounded-xl border shadow-lg overflow-hidden mb-6'>
+            <LiveMap userLocation={userLocation} deliveryBoyLocation={deliveryBoyLocation} />
           </div>
-        )}
+          <DeliveryChat orderId={activeOrder.order._id} deliveryBoyId={userData?._id?.toString()!}/>
+          <div className='mt-6 bg-white rounded-xl border shadow p-6'>
+            {!activeOrder.order.deliveryOtpVerification && !showOtpBox && (
+             <button
+          
+             className='w-full py-4 bg-green-600 text-center text-white rounded-lg'
+             >{sendOtpLoading?<Loader size={16} className='animate-spin text-white text-center'/>:"Mark as Delivered"}</button>
+            )}
+            {
+              showOtpBox &&
+              <div className='mt-4'>
+             <input type="text" className='w-full py-3 border rounded-lg text-center' placeholder='Enter Otp' maxLength={4} onChange={(e)=>setOtp(e.target.value)} value={otp}/>
+             <button className='w-full mt-4 bg-blue-600 text-white py-3 text-center rounded-lg'>{verifyOtpLoading?<Loader size={16} className='animate-spin text-white text-center'/>:"Verify OTP"}</button>
+             {otpError && <div className='text-red-600 mt-2'>{otpError}</div>}
 
-       {assignments.filter((a) => a.order != null).map((a) => (
-          <div key={a._id} className='bg-white rounded-2xl border border-gray-100 shadow-sm mb-4 overflow-hidden'>
-
-            {/* Card Header */}
-            <div className='px-5 py-3 bg-gradient-to-r from-green-50 to-white border-b border-gray-100 flex items-center justify-between'>
-              <p className='text-sm font-bold text-gray-800'>
-                Order #{a?.order?._id?.toString().slice(-6).toUpperCase() ?? "------"}
-              </p>
-              <span className={`text-xs font-semibold px-3 py-1 rounded-full ${
-                a.status === "broadcasted"
-                  ? "bg-yellow-100 text-yellow-700"
-                  : "bg-green-100 text-green-700"
-              }`}>
-                {a.status === "broadcasted" ? "Pending" : "Accepted"}
-              </span>
-            </div>
-
-            {/* Card Body */}
-            <div className='px-5 py-4'>
-              <div className='flex items-start gap-2 text-sm text-gray-500'>
-                <MapPin size={14} className='text-green-600 mt-0.5 shrink-0' />
-                <span>{a.order?.address?.fullAddress ?? "Address not found"}</span>
               </div>
-            </div>
+            }
+           {activeOrder.order.deliveryOtpVerification && <div className='text-green-700 text-center font-bold'>Delivery completed!</div>}
 
-            {/* Actions */}
-            <div className='flex gap-3 px-5 py-3 bg-gray-50 border-t border-gray-100'>
-              {a.status === "broadcasted" ? (
-                <>
-                  <button
-                    onClick={() => handleAccept(a._id!)}
-                    className='flex-1 flex items-center justify-center gap-1.5 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold py-2.5 rounded-xl transition-all'>
-                    <CheckCircle size={15} /> Accept
-                  </button>
-                  <button
-                    className='flex-1 flex items-center justify-center gap-1.5 bg-white hover:bg-red-50 text-red-500 border border-red-200 text-sm font-semibold py-2.5 rounded-xl transition-all'>
-                    <XCircle size={15} /> Reject
-                  </button>
-                </>
-              ) : (
-                <div className='flex-1 text-sm text-gray-600 flex items-center justify-center rounded-xl border border-green-300 bg-green-50 py-2.5'>
-                  Assigned to you
-                </div>
-              )}
+             
+          </div>
+
+
+        </div>
+
+
+      </div>
+    )
+  }
+
+
+  return (
+    <div className='w-full min-h-screen bg-gray-50 p-4'>
+      <div className="max-w-3xl mx-auto">
+        <h2 className='text-2xl font-bold mt-[120px] mb-[30px]'>Delivery Assigments</h2>
+
+        {assignments.map((a,index) => (
+          <div key={index} className='p-5 bg-white rounded-xl shadow mb-4  border'>
+            <p ><b>Order Id </b> #{a?.order._id.slice(-6)}</p>
+            <p className='text-gray-600'>{a.order.address.fullAddress}</p>
+
+            <div className='flex gap-3 mt-4'>
+              <button className='flex-1 bg-green-600 text-white py-2 rounded-lg'
+                onClick={() => handleAccept(a._id)}
+              >Accept</button>
+              <button className='flex-1 bg-red-600 text-white py-2 rounded-lg'>Reject</button>
             </div>
           </div>
         ))}
