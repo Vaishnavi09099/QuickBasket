@@ -116,7 +116,7 @@ return ()=>socket.off("order-status-update")
           <span>{order.address.fullAddress}</span>
         </div>
 
-    {order.assignedDeliveryBoy && (
+    {order.assignedDeliveryBoy && status !== "delivered" && (
   <div className="mt-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 space-y-3">
     
     {/* Top row: delivery boy info + call button */}
@@ -127,15 +127,15 @@ return ()=>socket.off("order-status-update")
         </div>
         <div>
           <p className="text-xs font-semibold text-gray-800">
-            {order.assignedDeliveryBoy.name}
+            {order.address.fullName}
           </p>
           <p className="text-xs text-gray-500">
-           📞  +91 {order.assignedDeliveryBoy.mobile}
+           📞  +91 {order.address.mobile}
           </p>
         </div>
       </div>
       <a
-        href={`tel:${order.assignedDeliveryBoy.mobile}`}
+        href={`tel:${order.address.mobile}`}
         className="text-xs font-semibold border border-gray-300 text-gray-800 px-3 py-1.5 rounded-lg bg-white hover:bg-gray-50 transition"
       >
       Call

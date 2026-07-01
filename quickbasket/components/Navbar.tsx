@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { FormEvent, useEffect, useState } from "react";
 import {
   Search,
   ShoppingBasket,
@@ -34,6 +34,9 @@ const Navbar = ({ user }: { user: IUser }) => {
   const [searchBarOpen,setSearchBarOpen] = useState(false);
   const [menuOpen,setMenuOpen] = useState(false);
   const {cartData} = useSelector((state:RootState)=>state.cart)
+    const [search,setSearch]=useState("")
+
+
   const router = useRouter();
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -45,6 +48,21 @@ const Navbar = ({ user }: { user: IUser }) => {
 
     return () => window.removeEventListener("click", handleClick);
   }, [open]);
+
+
+
+      const handleSearch=(e:FormEvent)=>{
+e.preventDefault()
+const query=search.trim()
+if(!query){
+    return  router.push("/")
+}
+
+router.push(`/?q=${encodeURIComponent(query)}`)
+setSearch("")
+setSearchBarOpen(false)
+    }
+
 
   // render mobile sidebar inline (avoid portal complexity)
 
@@ -67,20 +85,20 @@ const Navbar = ({ user }: { user: IUser }) => {
       </div>
 
       {/* Search */}
-      {user.role == "user" && (<div className="hidden md:flex flex-1 max-w-3xl mx-8">
-        <div className="w-full flex items-center bg-white rounded-full px-5 py-2 shadow-sm">
-          <Search className="text-gray-500" size={20} />
-
-          <input
-            type="text"
-            placeholder="Search groceries, fruits, brands..."
-            className="flex-1 ml-3 outline-none bg-transparent"
-          />
-        </div>
-      </div>)
-      
-      
-      }
+     {user.role == "user" && (
+  <div className="hidden md:flex flex-1 max-w-3xl mx-8">
+    <form onSubmit={handleSearch} className="w-full flex items-center bg-white rounded-full px-5 py-2 shadow-sm">
+      <Search className="text-gray-500" size={20} />
+      <input
+        type="text"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Search groceries, fruits, brands..."
+        className="flex-1 ml-3 outline-none bg-transparent"
+      />
+    </form>
+  </div>
+)}
 
 
 

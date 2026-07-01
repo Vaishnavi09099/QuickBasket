@@ -1,6 +1,6 @@
 'use client'
 import { getSocket } from '@/lib/socket'
-
+import { IDeliveryAssignment } from '@/models/deliveryAssignment.model'
 import { RootState } from '@/redux/store'
 import axios from 'axios'
 import { resolveSoa } from 'dns'
@@ -9,9 +9,8 @@ import { useSelector } from 'react-redux'
 import LiveMap from './LiveMap'
 import DeliveryChat from './DeliveryChat'
 import { div } from 'motion/react-client'
-import { Loader } from 'lucide-react'
-import { Bar, BarChart, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import DeliveryAssignment from '@/models/deliveryAssignment.model'
+import { CheckCircle, Loader, MapPin } from 'lucide-react'
+import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
 interface ILocation {
   latitude: number,
@@ -123,105 +122,199 @@ return ()=>socket.off("update-deliveryBoy-location")
   }, [userData])
 
 
+const sendOtp=async ()=>{
+  setSendOtpLoading(true)
+  try {
+    const result=await axios.post("/api/delivery/otp/send",{orderId:activeOrder.order._id})
+    console.log(result.data)
+    setShowOtpBox(true)
+    setSendOtpLoading(false)
+  } catch (error) {
+    console.log(error)
+    setSendOtpLoading(false)
+  }
+}
 
+const verifyOtp=async ()=>{
+  setVerifyOtpLoading(true)
+  try {
+    const result=await axios.post("/api/delivery/otp/verify",{orderId:activeOrder.order._id,otp})
+    console.log(result.data)
+    setActiveOrder(null)
+setVerifyOtpLoading(false)
+await fetchCurrentOrder()
+window.location.reload()
+  } catch (error) {
+   setOtpError("Otp Verification Error")
+   console.log(error)
+   setVerifyOtpLoading(false)
+  }
+}
 
-if(!activeOrder && assignments.length===0){
- 
-  const todayEarning=[
-    {name:"Today",
-     earning,
-     deliveries:earning/40
+if (!activeOrder && assignments.length === 0) {
+
+  const todayEarning = [
+    {
+      name: "Today",
+      earnings: earning,
+      deliveries: Math.round(earning / 40)
     }
   ]
+
   return (
-    <div className='flex items-center justify-center min-h-screen bg-linear-to-br from-white to-green-50 p-6'>
+    <div className='min-h-screen bg-gradient-to-br from-emerald-50 via-white to-amber-50 flex items-center justify-center p-6'>
       <div className='max-w-md w-full text-center'>
-      <h2 className='text-2xl font-bold text-gray-800'>No Active Deliveries 🚛</h2>
-      <p className='text-gray-500 mb-5'>Stay online to receive new orders</p>
 
-      <div className='bg-white border rounded-xl shadow-xl p-6'>
-        <h2 className='font-medium text-green-700 mb-2'>Today's Performance</h2>
-         <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={todayEarning}>
-         <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="earnings" name="Earnings (₹)" />
-                <Bar dataKey="deliveries" name="Deliveries" />
+       
+        <h2 className='font-serif text-3xl font-bold text-emerald-950 mt-5'>No Active Deliveries 🚛</h2>
+        <p className='text-gray-500 mt-2 mb-8'>Stay online to receive new orders</p>
 
-                    </BarChart>
-                </ResponsiveContainer>
+        <div className='bg-white border border-gray-100 rounded-3xl shadow-sm p-6'>
+          <h3 className='font-serif text-xl font-bold text-gray-900 mb-1'>Today's Performance</h3>
+          <p className='text-xs text-gray-500 mb-6'>Earnings & deliveries snapshot</p>
 
-         <p className='mt-4 text-lg font-bold text-green-700'>{earning || 0} Earned today</p>
-         <button className='mt-4 w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg' onClick={()=>window.location.reload()}>Refresh Earning</button>
+           <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={todayEarning}>
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="earnings" name="Earnings (₹)" fill="#16A34A" />
+              <Bar dataKey="deliveries" name="Deliveries" fill="#4ADE80" />
+            </BarChart>
+          </ResponsiveContainer>
+          <div className='mt-6 bg-emerald-50 border border-emerald-100 rounded-2xl p-5'>
+            <p className='text-xs font-semibold text-emerald-700 tracking-wide uppercase mb-1'>Earned Today</p>
+            <p className=' text-3xl font-bold text-emerald-950'>₹{earning || 0}</p>
+          </div>
+
+          <button
+            className='mt-5 w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 rounded-xl transition-colors'
+            onClick={() => window.location.reload()}
+          >
+            Refresh Earning
+          </button>
+        </div>
 
       </div>
-      </div>
-     
     </div>
   )
 }
 
-  if (activeOrder && userLocation) {
+if (activeOrder && userLocation) {
     return (
-      <div className='p-4 pt-[120px] min-h-screen bg-gray-50'>
+      <div className='p-4 pt-[40px] min-h-screen bg-gray-50'>
         <div className='max-w-3xl mx-auto'>
-          <h1 className='text-2xl font-bold text-green-700 mb-2'>Active Delivery</h1>
-          <p className='text-gray-600 text-sm mb-4'>order#{activeOrder.order._id.slice(-6)}</p>
 
-          <div className='rounded-xl border shadow-lg overflow-hidden mb-6'>
+          <div className='flex items-center justify-between mb-1'>
+            <h1 className='text-2xl font-bold text-green-700'>Active Delivery</h1>
+            <span className='flex items-center gap-1.5 bg-green-50 text-green-700 text-xs font-semibold px-3 py-1 rounded-full border border-green-200'>
+              <span className='w-1.5 h-1.5 rounded-full bg-green-500' />
+              On the way
+            </span>
+          </div>
+          <p className='text-gray-500 text-sm mb-6'>Order #{activeOrder.order._id.slice(-6)}</p>
+
+          <div className='rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-6'>
             <LiveMap userLocation={userLocation} deliveryBoyLocation={deliveryBoyLocation} />
           </div>
-          <DeliveryChat orderId={activeOrder.order._id} deliveryBoyId={userData?._id?.toString()!}/>
-          <div className='mt-6 bg-white rounded-xl border shadow p-6'>
-            {!activeOrder.order.deliveryOtpVerification && !showOtpBox && (
-             <button
-          
-             className='w-full py-4 bg-green-600 text-center text-white rounded-lg'
-             >{sendOtpLoading?<Loader size={16} className='animate-spin text-white text-center'/>:"Mark as Delivered"}</button>
-            )}
-            {
-              showOtpBox &&
-              <div className='mt-4'>
-             <input type="text" className='w-full py-3 border rounded-lg text-center' placeholder='Enter Otp' maxLength={4} onChange={(e)=>setOtp(e.target.value)} value={otp}/>
-             <button className='w-full mt-4 bg-blue-600 text-white py-3 text-center rounded-lg'>{verifyOtpLoading?<Loader size={16} className='animate-spin text-white text-center'/>:"Verify OTP"}</button>
-             {otpError && <div className='text-red-600 mt-2'>{otpError}</div>}
 
+          <DeliveryChat orderId={activeOrder.order._id} deliveryBoyId={userData?._id?.toString()!} />
+
+          <div className='mt-6 bg-white rounded-2xl border border-gray-100 shadow-sm p-6'>
+
+            {activeOrder.order.deliveryOtpVerification ? (
+              <div className='flex flex-col items-center text-center py-4'>
+                <div className='w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mb-3'>
+                  <CheckCircle size={24} className='text-green-600' />
+                </div>
+                <p className='text-green-700 font-bold text-lg'>Delivery completed!</p>
+                <p className='text-gray-400 text-sm mt-1'>Great job, this order is closed.</p>
               </div>
-            }
-           {activeOrder.order.deliveryOtpVerification && <div className='text-green-700 text-center font-bold'>Delivery completed!</div>}
+            ) : (
+              <>
+                {!showOtpBox && (
+                  <button
+                    onClick={sendOtp}
+                    disabled={sendOtpLoading}
+                    className='w-full py-3.5 bg-green-600 hover:bg-green-700 disabled:opacity-70 text-white font-semibold rounded-xl flex items-center justify-center gap-2 transition-colors'
+                  >
+                    {sendOtpLoading
+                      ? <Loader size={16} className='animate-spin' />
+                      : "Mark as Delivered"}
+                  </button>
+                )}
 
-             
+                {showOtpBox && (
+                  <div>
+                    <p className='text-sm text-gray-500 mb-3 text-center'>
+                      Enter the OTP shared by the customer
+                    </p>
+                    <input
+                      type="text"
+                      className='w-full py-3 border border-gray-200 rounded-xl text-center text-lg font-semibold tracking-[0.3em] outline-none focus:ring-2 focus:ring-green-500'
+                      placeholder='– – – –'
+                      maxLength={4}
+                      onChange={(e) => setOtp(e.target.value)}
+                      value={otp}
+                    />
+                    <button
+                      className='w-full mt-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-70 text-white font-semibold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors'
+                      onClick={verifyOtp}
+                      disabled={verifyOtpLoading}
+                    >
+                      {verifyOtpLoading
+                        ? <Loader size={16} className='animate-spin' />
+                        : "Verify OTP"}
+                    </button>
+                    {otpError && (
+                      <p className='text-red-600 text-sm mt-3 text-center'>{otpError}</p>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
           </div>
-
 
         </div>
-
-
       </div>
     )
-  }
+}
 
-
-  return (
+ return (
     <div className='w-full min-h-screen bg-gray-50 p-4'>
-      <div className="max-w-3xl mx-auto">
-        <h2 className='text-2xl font-bold mt-[120px] mb-[30px]'>Delivery Assigments</h2>
+      <div className="max-w-3xl mx-auto pt-[120px] pb-10">
+        <h2 className='text-2xl font-bold text-gray-800 mb-1'>Delivery Assignments</h2>
+        <p className='text-gray-500 text-sm mb-6'>New orders waiting for your response</p>
 
-        {assignments.map((a,index) => (
-          <div key={index} className='p-5 bg-white rounded-xl shadow mb-4  border'>
-            <p ><b>Order Id </b> #{a?.order._id.slice(-6)}</p>
-            <p className='text-gray-600'>{a.order.address.fullAddress}</p>
+        {assignments.length === 0 ? (
+          <div className='text-center text-gray-400 py-10'>No new assignments right now</div>
+        ) : (
+          assignments.map((a, index) => (
+            <div key={index} className='p-5 bg-white rounded-2xl shadow-sm border border-gray-100 mb-4'>
+              <div className='flex items-center gap-2 mb-1'>
+                <span className='font-semibold text-gray-800'>Order ID</span>
+                <span className='text-green-700 font-bold'>#{a?.order._id.slice(-6)}</span>
+              </div>
+              <div className='flex items-start gap-2 text-gray-600 text-sm'>
+                <MapPin size={15} className='text-green-600 flex-shrink-0 mt-0.5' />
+                <span>{a.order.address.fullAddress}</span>
+              </div>
 
-            <div className='flex gap-3 mt-4'>
-              <button className='flex-1 bg-green-600 text-white py-2 rounded-lg'
-                onClick={() => handleAccept(a._id)}
-              >Accept</button>
-              <button className='flex-1 bg-red-600 text-white py-2 rounded-lg'>Reject</button>
+              <div className='flex gap-3 mt-4'>
+                <button
+                  className='flex-1 bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-xl font-semibold transition-colors'
+                  onClick={() => handleAccept(a._id)}
+                >
+                  Accept
+                </button>
+                <button className='flex-1 bg-red-600 hover:bg-red-700 text-white py-2.5 rounded-xl font-semibold transition-colors'>
+                  Reject
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
     </div>
   )

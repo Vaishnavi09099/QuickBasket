@@ -141,7 +141,7 @@ const AdminOrderCard = ({ order }: { order: IOrderItem }) => {
         </div>
 
         {/* Assigned Delivery Boy */}
-        {order.assignedDeliveryBoy && (
+        {order.assignedDeliveryBoy && status !== "delivered"  && (
           <div className="mt-3 flex items-center justify-between bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
@@ -149,19 +149,19 @@ const AdminOrderCard = ({ order }: { order: IOrderItem }) => {
               </div>
               <div>
                 <p className="text-xs font-semibold text-gray-800">
-                  {order.assignedDeliveryBoy.name}
+                  {order.address.fullName}
                 </p>
                 <p className="text-xs text-gray-500">
-                  +91 {order.assignedDeliveryBoy.mobile}
+                  +91 {order.address.mobile}
                 </p>
               </div>
             </div>
             <a
-              href={`tel:${order.assignedDeliveryBoy.mobile}`}
-              className="text-xs font-semibold bg-blue-800 border border-blue-900 text-black px-3 py-1.5 rounded-lg  transition"
-            >
-              Call
-            </a>
+        href={`tel:${order.address.mobile}`}
+        className="text-xs font-semibold border border-gray-300 text-gray-800 px-3 py-1.5 rounded-lg bg-white hover:bg-gray-50 transition"
+      >
+      Call
+      </a>
           </div>
         )}
       </div>

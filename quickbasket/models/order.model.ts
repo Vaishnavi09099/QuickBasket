@@ -1,88 +1,112 @@
 import mongoose from "mongoose";
-import { IUser } from "./user.model";
+
+
 
 export interface IOrderItem {
-  _id?: mongoose.Types.ObjectId;
-  user: mongoose.Types.ObjectId;
-  items: {
-    grocery: mongoose.Types.ObjectId;
-    name: string;
-    price: string;
-    unit: string;
-    quantity: number;
-    image: string;
-  }[];
-  totalAmount: number;
-  isPaid: boolean;
-  paymentMethod: "cod" | "online";
-  assignment?: mongoose.Types.ObjectId;
-  address: {
-    fullName: string;
-    city: string;
-    mobile: string;
-    state: string;
-    pincode: string;
-    fullAddress: string;
-    latitude: number;
-    longitude: number;
-  };
-  // ✅ string union, array nahi
-  status: "pending" | "out of delivery" | "delivered";
-  assignedDeliveryBoy?: IUser;
-  createdAt?: Date;
-  updatedAt?: Date;
+    _id?: mongoose.Types.ObjectId
+    user: mongoose.Types.ObjectId
+    items: [
+        {
+            grocery: mongoose.Types.ObjectId,
+            name: string,
+            price: string,
+            unit: string,
+            image: string
+            quantity: number
+        }
+    ]
+    ,
+    isPaid: boolean
+    totalAmount: number,
+    paymentMethod: "cod" | "online"
+    address: {
+        fullName: string,
+        mobile: string,
+        city: string,
+        state: string,
+        pincode: string,
+        fullAddress: string,
+        latitude: number,
+        longitude: number
+    }
+    assignment?: mongoose.Types.ObjectId
+    assignedDeliveryBoy?: mongoose.Types.ObjectId
+    status: "pending" | "out of delivery" | "delivered",
+    createdAt?: Date
+    updatedAt?: Date
+    deliveryOtp:string | null
+    deliveryOtpVerification:Boolean
+    deliveredAt:Date
 }
 
-const orderSchema = new mongoose.Schema<IOrderItem>(
-  {
-    user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+const orderSchema = new mongoose.Schema<IOrderItem>({
+    user: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        required: true
+    },
     items: [
-      {
-        grocery: { type: mongoose.Schema.Types.ObjectId, ref: "Grocery" },
-        name: String,
-        price: String,
-        unit: String,
-        image: String,
-        quantity: Number,
-      },
+        {
+            grocery: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "Grocery",
+                required: true
+            },
+            name: String,
+            price: String,
+            unit: String,
+            image: String,
+            quantity: Number
+        }
     ],
     paymentMethod: {
-      type: String,
-      enum: ["cod", "online"],
-      default: "cod",
+        type: String,
+        enum: ["cod", "online"],
+        default: "cod"
     },
-    address: {
-      fullName: String,
-      city: String,
-      mobile: String,
-      state: String,
-      pincode: String,
-      fullAddress: String,
-      latitude: Number,
-      longitude: Number,
+    isPaid: {
+        type: Boolean,
+        default: false
     },
     totalAmount: Number,
-    assignment: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "DeliveryAssignment",
-      default: null,
+    address: {
+        fullName: String,
+        mobile: String,
+        city: String,
+        state: String,
+        pincode: String,
+        fullAddress: String,
+        latitude: Number,
+        longitude: Number
     },
+    assignment: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "DeliveryAssignment",
+        default:null
+    },
+
     assignedDeliveryBoy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      default: null,
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User"
     },
     status: {
-      type: String,
-      // ✅ "out for delivery" consistent rakha
-      enum: [ "pending" , "out of delivery" , "delivered"],
-      default: "pending",
+        type: String,
+        enum: ["pending", "out of delivery", "delivered"],
+        default: "pending"
     },
-    isPaid: { type: Boolean, default: false },
-  },
-  { timestamps: true }
-);
+    deliveryOtp:{
+        type:String,
+        default:null
+    },
+    deliveryOtpVerification:{
+        type:Boolean,
+        default:false
+    },
+    deliveredAt:{
+        type:Date
+    }
+}, { timestamps: true })
 
-const Order = mongoose.models.Order || mongoose.model<IOrderItem>("Order", orderSchema);
 
-export default Order;
+const Order = mongoose.models.Order || mongoose.model("Order", orderSchema)
+export default Order
