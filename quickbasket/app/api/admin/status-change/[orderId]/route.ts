@@ -10,7 +10,6 @@ export async function POST(req: NextRequest, context: { params: Promise<{ orderI
     await connectToDB();
     const { orderId } = await context.params;
     const { status } = await req.json();
-
     const order = await Order.findById(orderId).populate("user");
     if (!order) {
       return NextResponse.json({ message: "Order not found" }, { status: 400 });
@@ -20,88 +19,72 @@ export async function POST(req: NextRequest, context: { params: Promise<{ orderI
     let deliveryBoysPayload: any[] = [];
 
     if ((status === "OUT OF DELIVERY" || status === "out of delivery") && !order.assignment) {
-      const { latitude, longitude } = order.address;
+      try {
+        const { latitude, longitude } = order.address || {};
 
-      const nearByDeliveryBoys = await User.find({
-        role: "deliveryBoy",
-        location: {
-          $near: {
-            $geometry: { type: "Point", coordinates: [Number(longitude), Number(latitude)] },
-            $maxDistance: 10000, // 10 km radius
+        if (!latitude || !longitude || isNaN(Number(latitude)) || isNaN(Number(longitude))) {
+          throw new Error("Missing or invalid coordinates");
+        }
+
+        const nearByDeliveryBoys = await User.find({
+          role: "deliveryBoy",
+          location: {
+            $near: {
+              $geometry: { type: "Point", coordinates: [Number(longitude), Number(latitude)] },
+              $maxDistance: 10000,
+            },
           },
-        },
-      });
+        });
 
-      const nearByIds = nearByDeliveryBoys.map((b) => b._id);
-
-      const busyIds = await DeliveryAssignment.find({
-        assignedTo: { $in: nearByIds },
-        status: { $nin: ["broadcasted", "completed"] },
-      }).distinct("assignedTo");
-
-      const busyIdSet = new Set(busyIds.map((b) => String(b)));
-
-      // ✅ Fix: busy wale NAHI chahiye, isliye ! lagaya
-      const availableDeliveryBoys = nearByDeliveryBoys.filter(
-        (b) => !busyIdSet.has(String(b._id))
-      );
-
-      const candidates = availableDeliveryBoys.map((b) => b._id);
-
-      if (candidates.length === 0) {
-        await order.save();
-           await emitEventHandler("order-status-update",{orderId:order._id.toString(),status:order.status})
-
-
-        return NextResponse.json(
-          { message: "No available delivery boy found nearby" },
-          { status: 200 }
+        const nearByIds = nearByDeliveryBoys.map((b) => b._id);
+        const busyIds = await DeliveryAssignment.find({
+          assignedTo: { $in: nearByIds },
+          status: { $nin: ["broadcasted", "completed"] },
+        }).distinct("assignedTo");
+        const busyIdSet = new Set(busyIds.map((b) => String(b)));
+        const availableDeliveryBoys = nearByDeliveryBoys.filter(
+          (b) => !busyIdSet.has(String(b._id))
         );
+        const candidates = availableDeliveryBoys.map((b) => b._id);
+
+        if (candidates.length > 0) {
+          const deliveryAssignment = await DeliveryAssignment.create({
+            order: order._id,
+            broadcastedTo: candidates,
+            status: "broadcasted",
+          });
+          await deliveryAssignment.populate("order");
+
+          for (const boyId of candidates) {
+            const boy = await User.findById(boyId);
+            if (boy?.socketId) {
+              await emitEventHandler("new-assignment", deliveryAssignment, boy.socketId);
+            }
+          }
+
+          order.assignment = deliveryAssignment._id;
+          deliveryBoysPayload = availableDeliveryBoys.map((b) => ({
+            name: b.name,
+            id: b._id,
+            mobile: b.mobile,
+            latitude: b.location.coordinates[1],
+            longitude: b.location.coordinates[0],
+          }));
+        }
+      } catch (assignErr) {
+        console.error("Delivery assignment error (non-fatal):", assignErr);
       }
-
-      const deliveryAssignment = await DeliveryAssignment.create({
-        order: order._id,
-        broadcastedTo: candidates,
-        status: "broadcasted",
-      });
-
-      
-             await deliveryAssignment.populate("order");
-             for(const boyId of candidates){
-                const boy=await User.findById(boyId)
-                if(boy.socketId){
-                    await emitEventHandler("new-assignment",deliveryAssignment,boy.socketId)
-                }
-             }
-
-     
-      order.assignment = deliveryAssignment._id;
-
-      deliveryBoysPayload = availableDeliveryBoys.map((b) => ({
-        name: b.name,
-        id: b._id,
-        mobile: b.mobile,
-        latitude: b.location.coordinates[1],
-        longitude: b.location.coordinates[0],
-      }));
-         await deliveryAssignment.populate("order")
     }
 
-
-
-    
- 
-
-    // ✅ Fix: save + final return jo missing tha
     await order.save();
-    await order.populate("user")
+    await order.populate("user");
+    await emitEventHandler("order-status-update", { orderId: order._id.toString(), status: order.status });
 
-    await emitEventHandler("order-status-update",{orderId:order._id.toString(),status:order.status})
     return NextResponse.json(
       {
         message: "Order status updated successfully",
         availableBoys: deliveryBoysPayload,
-        assignment:order.assignment?._id
+        assignment: order.assignment?._id,
       },
       { status: 200 }
     );
