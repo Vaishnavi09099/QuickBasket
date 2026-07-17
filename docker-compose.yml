@@ -1,0 +1,22 @@
+version: "3.9"
+
+services:
+  quickbasket:
+    build:
+      context: ./quickbasket
+      args:
+        NEXT_PUBLIC_SOCKET_SERVER: http://localhost:5001
+    ports:
+      - "3001:3000"
+    env_file:
+      - ./quickbasket/.env.local
+    depends_on:
+      - socketserver
+
+  socketserver:
+    build:
+      context: ./socketServer
+    ports:
+      - "5001:4000"
+    env_file:
+      - ./socketServer/.env.local

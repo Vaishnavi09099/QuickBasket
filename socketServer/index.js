@@ -11,12 +11,11 @@ app.use(express.json())
 
 const server = http.createServer(app)
 const port = process.env.PORT || 5000
+const apiBaseUrl = process.env.INTERNAL_API_URL || process.env.NEXT_BASE_URL || "http://localhost:3000"
 
 const io = new Server(server,{
     cors:{
-     
-        origin: process.env.NEXT_BASE_URL
-    
+        origin: process.env.CORS_ORIGIN
     }
 })
 
@@ -27,8 +26,11 @@ io.on("connection",(socket)=>{
 
     socket.on("identity",async (userId)=>{
         console.log("User identity",userId)
-       
-        await axios.post(`${process.env.NEXT_BASE_URL}/api/socket/connect`,{userId,socketId:socket.id})
+        try {
+            await axios.post(`${apiBaseUrl}/api/socket/connect`,{userId,socketId:socket.id})
+        } catch (error) {
+            console.log("connect error:", error.message)
+        }
     })
 
      socket.on("updateLocation",async ({userId,latitude,longitude})=>{
@@ -37,7 +39,11 @@ io.on("connection",(socket)=>{
         type:"Point",
         coordinates:[longitude,latitude]
     }
-    await axios.post(`${process.env.NEXT_BASE_URL}/api/socket/updateLocation`,{userId,location})
+    try {
+        await axios.post(`${apiBaseUrl}/api/socket/updateLocation`,{userId,location})
+    } catch (error) {
+        console.log("location update error:", error.message)
+    }
        io.emit("update-deliveryBoy-location",{userId,location})
    })
 
@@ -52,7 +58,7 @@ io.on("connection",(socket)=>{
 socket.on("send-message", async (message) => {
   console.log(message)
   try {
-    const result = await axios.post(`${process.env.NEXT_BASE_URL}/api/chat/save`, message)
+    const result = await axios.post(`${apiBaseUrl}/api/chat/save`, message)
     console.log("saved:", result.data)
   } catch (error) {
     console.log("save error:", error.message)
