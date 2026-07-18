@@ -52,6 +52,8 @@ emailWorker.on("completed", (job) => {
 
 emailWorker.on("failed", (job, err) => {
     console.log(`Job ${job?.id} failed:`, err.message)
+    console.log("Full error:", err)
 })
+
 
 export default emailWorker
