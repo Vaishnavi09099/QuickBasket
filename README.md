@@ -65,6 +65,25 @@ A full-stack grocery delivery web application built with Next.js, featuring user
 - **Why**: OTP is temporary by nature. Redis's built-in TTL eliminates manual cleanup and ensures fast verification
 - **Result**: Automatic expiry prevents expired OTPs, keeps MongoDB clean from temporary data
 
+## Background Email Processing (BullMQ)
+
+QuickBasket uses BullMQ (backed by the same Redis instance) to send order-related emails asynchronously, so API responses aren't delayed by email delivery.
+
+**How it works:**
+- When an order is placed (`/api/user/order`), a job is added to the `email-queue` with order details (items, total, address, payment method).
+- When a delivery is completed via OTP verification (`/api/delivery/otp/verify`), a job is added to send a delivery confirmation email.
+- The `quickbasket` (Next.js) app acts as the **producer** — it only pushes jobs to the queue and returns a response immediately.
+- The `socketServer` (Render, always-on) runs the **worker** — it picks up jobs from the queue and sends the actual emails via [Resend](https://resend.com).
+
+**Why BullMQ:**
+- Next.js on Vercel is serverless — it can't run a persistent worker process to consume jobs.
+- The always-on `socketServer` on Render is used as the worker instead, sharing the same Redis instance as the producer.
+- This decouples email sending from the API request lifecycle — if email delivery is slow or temporarily fails, it doesn't block or fail the order/delivery API response, and BullMQ automatically retries failed jobs.
+
+**Environment variables required (socketServer):**
+REDIS_URL=your_redis_url
+RESEND_API_KEY=your_resend_api_key
+
 ## Project Structure
 
 ```
@@ -153,7 +172,7 @@ INTERNAL_API_URL=http://host.docker.internal:3001
 REDIS_URL=redis://redis:6379
 ```
 
-> Note: If running via Docker Compose, `INTERNAL_API_URL` and `REDIS_URL` use Docker service names (`quickbasket`, `redis`) for container-to-container communication. If running without Docker, replace with `http://localhost:3001` and `redis://localhost:6379` respectively.
+> Note: If running via Docker Compose, `INTERNAL_API_URL` and `REDIS_URL` use Docker service names (`quickbasket`, `redis`) for container-to-container communication. If running without Docker, re[...]
 
 5. **Run the applications**
 
