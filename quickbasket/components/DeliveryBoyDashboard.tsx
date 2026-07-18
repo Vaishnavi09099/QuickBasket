@@ -6,7 +6,9 @@ import axios from 'axios'
 import { resolveSoa } from 'dns'
 import React, { useEffect, useState } from 'react'
 import { useSelector } from 'react-redux'
-import LiveMap from './LiveMap'
+import dynamic from 'next/dynamic'
+
+const LiveMap = dynamic(() => import('./LiveMap'), { ssr: false })
 import DeliveryChat from './DeliveryChat'
 import { div } from 'motion/react-client'
 import { CheckCircle, Loader, MapPin } from 'lucide-react'

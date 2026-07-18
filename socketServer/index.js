@@ -3,6 +3,7 @@ import http from "http"
 import dotenv from "dotenv"
 import {Server} from "socket.io"
 import axios from "axios";
+import Redis from "ioredis"
 
 dotenv.config()
 
@@ -10,8 +11,12 @@ const app = express()
 app.use(express.json())
 
 const server = http.createServer(app)
+const redis = new Redis(process.env.REDIS_URL)
 const port = process.env.PORT || 5000
 const apiBaseUrl = process.env.INTERNAL_API_URL || process.env.NEXT_BASE_URL || "http://localhost:3000"
+
+redis.on("connect", () => console.log("Redis connected"))
+redis.on("error", (err) => console.log("Redis error:", err.message))
 
 const io = new Server(server,{
     cors:{
@@ -33,20 +38,30 @@ io.on("connection",(socket)=>{
         }
     })
 
-     socket.on("updateLocation",async ({userId,latitude,longitude})=>{
-       
-    const location={
-        type:"Point",
-        coordinates:[longitude,latitude]
+socket.on("updateLocation", async ({userId, latitude, longitude}) => {
+    const location = {
+        type: "Point",
+        coordinates: [longitude, latitude]
     }
+
+    // ⏱️ Redis timing
+    const redisStart = Date.now()
+    await redis.set(`location:${userId}`, JSON.stringify(location), "EX", 60)
+    const redisTime = Date.now() - redisStart
+    console.log(`Redis write took: ${redisTime}ms`)
+
+    io.emit("update-deliveryBoy-location", {userId, location})
+
+    // ⏱️ MongoDB timing
     try {
-        await axios.post(`${apiBaseUrl}/api/socket/updateLocation`,{userId,location})
+        const mongoStart = Date.now()
+        await axios.post(`${apiBaseUrl}/api/socket/updateLocation`, {userId, location})
+        const mongoTime = Date.now() - mongoStart
+        console.log(`MongoDB write took: ${mongoTime}ms`)
     } catch (error) {
         console.log("location update error:", error.message)
     }
-       io.emit("update-deliveryBoy-location",{userId,location})
-   })
-
+})
 
 
 

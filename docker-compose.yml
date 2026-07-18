@@ -20,3 +20,11 @@ services:
       - "5001:4000"
     env_file:
       - ./socketServer/.env.local
+
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
