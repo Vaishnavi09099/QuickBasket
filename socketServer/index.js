@@ -4,6 +4,7 @@ import dotenv from "dotenv"
 import {Server} from "socket.io"
 import axios from "axios";
 import Redis from "ioredis"
+import "./worker.js"
 
 dotenv.config()
 

@@ -1,6 +1,7 @@
 import connectToDB from "@/lib/db";
 import emitEventHandler from "@/lib/emitEventHandler";
 import redis from "@/lib/redis";
+import { emailQueue } from "@/lib/queue";
 import DeliveryAssignment from "@/models/deliveryAssignment.model";
 import Order from "@/models/order.model";
 import { NextRequest, NextResponse } from "next/server";
@@ -16,7 +17,8 @@ export async function POST(req: NextRequest) {
             )
         }
 
-        const order = await Order.findById(orderId)
+        // 👇 .populate("user") add kiya taaki email/name mil sake
+        const order = await Order.findById(orderId).populate("user")
         if (!order) {
             return NextResponse.json(
                 { message: "order not found" },
@@ -24,7 +26,6 @@ export async function POST(req: NextRequest) {
             )
         }
 
-        // Redis se saved OTP nikal
         const savedOtp = await redis.get(`delivery-otp:${orderId}`)
 
         if (!savedOtp) {
@@ -44,16 +45,21 @@ export async function POST(req: NextRequest) {
         order.status = "delivered"
         order.deliveryOtpVerification = true
         order.deliveredAt = new Date()
-        // COD order delivered hote hi paid maan lo
-if (order.paymentMethod === "cod") {
-    order.isPaid = true
-}
 
+        if (order.paymentMethod === "cod") {
+            order.isPaid = true
+        }
 
         await order.save()
 
-        // Verify ho gaya, ab Redis se OTP hata do
         await redis.del(`delivery-otp:${orderId}`)
+
+        // 📧 Delivery confirmation email queue mein daal do
+        await emailQueue.add("order-delivered", {
+            to: order.user.email,
+            userName: order.user.name,
+            orderId: order._id.toString()
+        })
 
         await emitEventHandler("order-status-update", { orderId: order._id, status: order.status })
         await DeliveryAssignment.updateOne(

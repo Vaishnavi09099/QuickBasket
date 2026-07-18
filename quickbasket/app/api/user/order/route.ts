@@ -4,6 +4,7 @@ import connectDB from "@/lib/db";
 import Order from "@/models/order.model";
 import User from "@/models/user.model";
 import emitEventHandler from "@/lib/emitEventHandler";
+import { emailQueue } from "@/lib/queue";
 
 export async function POST(req: NextRequest) {
   try {
@@ -28,6 +29,17 @@ export async function POST(req: NextRequest) {
     })
 
      await emitEventHandler("new-order",newOrder)
+
+     // 📧 Email job queue mein daal do - background mein process hogi
+await emailQueue.add("order-confirmation", {
+    to: user.email,
+    userName: user.name,
+    orderId: newOrder._id.toString(),
+    items,
+    totalAmount,
+    address,
+    paymentMethod
+})
 
         return NextResponse.json(
             newOrder,
