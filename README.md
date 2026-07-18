@@ -120,29 +120,40 @@ quickbasket/
 
 4. **Set up environment variables**
 
-   Create `.env` files in both `quickbasket/` and `socketServer/` directories with the following variables:
+Create `.env.local` files in both `quickbasket/` and `socketServer/` directories with the following variables:
 
-   **quickbasket/.env**
-   ```
-   MONGODB_URI=your_mongodb_uri
-   REDIS_URL=redis://localhost:6379
-   NEXTAUTH_URL=http://localhost:3000
-   NEXTAUTH_SECRET=your_nextauth_secret
-   STRIPE_SECRET_KEY=your_stripe_secret_key
-   STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key
-   CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
-   CLOUDINARY_API_KEY=your_cloudinary_api_key
-   CLOUDINARY_API_SECRET=your_cloudinary_api_secret
-   MAILER_EMAIL=your_email
-   MAILER_PASSWORD=your_email_password
-   ```
+**quickbasket/.env.local**
+```
+MONGODB_URI=your_mongodb_uri
+AUTH_SECRET=your_auth_secret
+AUTH_URL=http://localhost:3001
+NEXTAUTH_URL=http://localhost:3001
+AUTH_TRUST_HOST=true
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
+CLOUDINARY_API_KEY=your_cloudinary_api_key
+CLOUDINARY_API_SECRET=your_cloudinary_api_secret
+NEXT_BASE_URL=http://localhost:3001
+NEXT_PUBLIC_SOCKET_SERVER=http://localhost:5001
+INTERNAL_SOCKET_URL=http://socketserver:4000
+STRIPE_SECRET_KEY=your_stripe_secret_key
+STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
+GEMINI_API_KEY=your_gemini_api_key
+EMAIL=your_email
+PASS=your_email_app_password
+REDIS_URL=redis://redis:6379
+```
 
-   **socketServer/.env**
-   ```
-   MONGODB_URI=your_mongodb_uri
-   REDIS_URL=redis://localhost:6379
-   PORT=3001
-   ```
+**socketServer/.env.local**
+```
+PORT=4000
+CORS_ORIGIN=http://localhost:3001
+INTERNAL_API_URL=http://host.docker.internal:3001
+REDIS_URL=redis://redis:6379
+```
+
+> Note: If running via Docker Compose, `INTERNAL_API_URL` and `REDIS_URL` use Docker service names (`quickbasket`, `redis`) for container-to-container communication. If running without Docker, replace with `http://localhost:3001` and `redis://localhost:6379` respectively.
 
 5. **Run the applications**
 
@@ -167,19 +178,17 @@ quickbasket/
    cd quickbasket
    ```
 
-2. **Build and run with Docker Compose**
-   ```bash
-   docker-compose up --build
-   ```
+2. **Running with Docker Compose (recommended)**
 
-   This will automatically set up:
-   - MongoDB database
-   - Redis cache
-   - Next.js application
-   - Socket.io server
+From the project root:
+```bash
+docker compose up --build
+```
+
+This starts the frontend (`localhost:3001`), socket server (`localhost:5001`), and Redis together on a shared network.
 
 3. **Access the application**
-   Visit [http://localhost:3000](http://localhost:3000)
+   Visit [http://localhost:3001](http://localhost:3001)
 
 ## Scripts
 
