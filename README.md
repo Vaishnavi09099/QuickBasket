@@ -78,11 +78,41 @@ QuickBasket uses BullMQ (backed by the same Redis instance) to send order-relate
 **Why BullMQ:**
 - Next.js on Vercel is serverless — it can't run a persistent worker process to consume jobs.
 - The always-on `socketServer` on Render is used as the worker instead, sharing the same Redis instance as the producer.
-- This decouples email sending from the API request lifecycle — if email delivery is slow or temporarily fails, it doesn't block or fail the order/delivery API response, and BullMQ automatically retries failed jobs.
+- This decouples email sending from the API request lifecycle — if email delivery is slow or temporarily fails, it doesn't block or fail the order/delivery API response, and BullMQ automatically[...]
 
 **Environment variables required (socketServer):**
 REDIS_URL=your_redis_url
 RESEND_API_KEY=your_resend_api_key
+
+## QuickBasket AI Assistant
+
+A floating, animated chat widget (available on every page) that lets logged-in users ask natural-language questions about their orders and products, powered by LangChain + LangGraph.
+
+**What it can do:**
+- Check order status and delivery history ("Where is my order?", "When was my last order delivered?")
+- Search available products by name or category ("Is milk available?", "Suggest healthy snacks")
+- Estimate cart cost before ordering ("How much for 2kg tomatoes and 1 packet of milk?")
+- Guide users to the right place for cancellations/refunds (does not process them directly)
+- Answer general food/seasonal questions using the model's own knowledge
+
+**How it works:**
+- Built with `createAgent` from LangChain (a ReAct-style agent that reasons about which tool to call).
+- Three custom tools query MongoDB directly for structured data: `get_order_status`, `search_products`, `calculate_cart_total`.
+- Each request is scoped to the logged-in user's ID, so the assistant only ever accesses that user's own orders.
+- Uses Google's Gemini (`gemini-2.5-flash`) as the underlying model.
+- A system prompt defines the assistant's role, available product categories, and behavioral rules (e.g., never revealing other users' data).
+
+**Why a tool-calling agent instead of RAG:**
+All the data the assistant needs (orders, products, prices) is structured and already lives in MongoDB. A tool-calling agent can query it directly and precisely — RAG (vector search over unstructured documents) would add unnecessary complexity for data that's already efficiently queryable via structured DB queries. RAG would be the right fit for future unstructured content, e.g. searching a long-form policy/FAQ document.
+
+**Environment variables required:**
+
+GEMINI_API_KEY=your_gemini_api_key
+
+
+**Frontend:** `components/QuickBasketAI.tsx` — a floating action button that expands into a chat window, mounted globally in `app/layout.tsx`.
+
+**Backend:** `app/api/ai-assistant/chat/route.ts` — receives the user's message and userId, invokes the LangChain agent, and returns the response.
 
 ## Project Structure
 
