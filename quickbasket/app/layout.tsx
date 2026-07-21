@@ -15,6 +15,7 @@ export const metadata: Metadata = {
 import Provider from "@/Provider";
 import StoreProvider from "@/redux/StoreProvider";
 import InitUser from "@/InitUser";
+import QuickBasketAI from "@/components/QuickBasketAI";
 
 export default function RootLayout({
   children,
@@ -30,6 +31,7 @@ export default function RootLayout({
           <StoreProvider>
             <InitUser />
             {children}
+            <QuickBasketAI />
           </StoreProvider>
         </Provider>
 
