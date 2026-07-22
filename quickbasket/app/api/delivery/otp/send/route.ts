@@ -21,11 +21,11 @@ export async function POST(req: NextRequest) {
         // MongoDB ki jagah ab Redis mein save, 10 minute expiry ke saath
         await redis.set(`delivery-otp:${orderId}`, otp, "EX", 600)
 
-        await sendMail(
-            order.user.email,
-            "Your Delivery OTP",
-            `<h2>Your Delivery OTP is <strong>${otp}</strong></h2>`
-        )
+      await sendMail({
+    to: order.user.email,
+    subject: "Your Delivery OTP",
+    html: `<h2>Your Delivery OTP is <strong>${otp}</strong></h2>`
+})
         return NextResponse.json(
             { message: "otp sent successfully" },
             { status: 200 }
