@@ -73,7 +73,7 @@ QuickBasket uses BullMQ (backed by the same Redis instance) to send order-relate
 - When an order is placed (`/api/user/order`), a job is added to the `email-queue` with order details (items, total, address, payment method).
 - When a delivery is completed via OTP verification (`/api/delivery/otp/verify`), a job is added to send a delivery confirmation email.
 - The `quickbasket` (Next.js) app acts as the **producer** — it only pushes jobs to the queue and returns a response immediately.
-- The `socketServer` (Render, always-on) runs the **worker** — it picks up jobs from the queue and sends the actual emails via [Resend](https://resend.com).
+- The `socketServer` (Render, always-on) runs the **worker** — it picks up jobs from the queue and sends the actual emails via [Nodemailer](https://nodemailer.com).
 
 **Why BullMQ:**
 - Next.js on Vercel is serverless — it can't run a persistent worker process to consume jobs.
@@ -82,7 +82,8 @@ QuickBasket uses BullMQ (backed by the same Redis instance) to send order-relate
 
 **Environment variables required (socketServer):**
 REDIS_URL=your_redis_url
-RESEND_API_KEY=your_resend_api_key
+NODEMAILER_USER=your_email
+NODEMAILER_PASS=your_email_password
 
 ## QuickBasket AI Assistant
 
@@ -103,7 +104,7 @@ A floating, animated chat widget (available on every page) that lets logged-in u
 - A system prompt defines the assistant's role, available product categories, and behavioral rules (e.g., never revealing other users' data).
 
 **Why a tool-calling agent instead of RAG:**
-All the data the assistant needs (orders, products, prices) is structured and already lives in MongoDB. A tool-calling agent can query it directly and precisely — RAG (vector search over unstructured documents) would add unnecessary complexity for data that's already efficiently queryable via structured DB queries. RAG would be the right fit for future unstructured content, e.g. searching a long-form policy/FAQ document.
+All the data the assistant needs (orders, products, prices) is structured and already lives in MongoDB. A tool-calling agent can query it directly and precisely — RAG (vector search over unstru[...]
 
 **Environment variables required:**
 
